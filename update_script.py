@@ -12,12 +12,19 @@ data = response.json()['result']
 
 # 2. Veriyi düzenle
 df = pd.DataFrame(data)
-# Sadece gerekli sütunları alalım ve ilk 50 depremi seçelim (kalabalığı önlemek için)
-df = df[['date', 'title', 'mag', 'lat', 'lng', 'depth']].head(50)
+
+# Sütun isimlerini kontrol et ve uygun olanları seç
+# API'de bazen 'geojson' içinde veya farklı isimlerde olabilir
+# En güvenli sütunları seçiyoruz
+available_columns = df.columns.tolist()
+target_columns = ['date', 'title', 'mag', 'lat', 'lng', 'depth']
+
+# Sadece var olan sütunları filtrele
+cols_to_use = [c for c in target_columns if c in available_columns]
+df = df[cols_to_use].head(50)
 
 # 3. Google Sheets Bağlantısı
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-# GitHub Secrets'a eklediğin anahtarı kullanır
 key_dict = json.loads(os.environ['GCP_KEY'])
 creds = Credentials.from_service_account_info(key_dict, scopes=scopes)
 client = gspread.authorize(creds)
@@ -26,8 +33,7 @@ client = gspread.authorize(creds)
 spreadsheet_id = "1QfRsf8YjsQnsCq1Gqwl3wXbDbgJxcv4sQGWsGx_G3zU"
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-# Tabloyu temizle ve yeni veriyi yaz
 sheet.clear()
 sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-print("Deprem verileri başarıyla güncellendi!")
+print("Veriler başarıyla güncellendi.")
