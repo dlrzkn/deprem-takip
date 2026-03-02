@@ -2,8 +2,8 @@ name: Otomatik Deprem Guncelleme
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Bu satır her 5 dakikada bir çalışmasını sağlar
-  workflow_dispatch: # Bu da istediğinde elle başlatman için buton ekler
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,5 +23,6 @@ jobs:
 
       - name: Run update script
         env:
-          GCP_KEY: ${{ secrets.GCP_KEY }}
+          # BURASI KRİTİK: GitHub Secrets'taki ismin tam olarak bu olduğundan emin ol
+          GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
         run: python update_script.py
