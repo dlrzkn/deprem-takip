@@ -13,13 +13,18 @@ data = response.json()['result']
 # 2. Veriyi düzenle
 df = pd.DataFrame(data)
 
-# Zaman bilgisi kontrolü (Kandilli API'sine göre dinamik seçim)
+# Zaman bilgisini güvenli bir şekilde çekmek için
 if 'date' in df.columns:
     df['tarih_saat'] = df['date']
+elif 'date_time' in df.columns:
+    df['tarih_saat'] = df['date_time']
 elif 'rev' in df.columns:
+    # Kandilli bazen tarih verisini 'rev' sütununda tutar
     df['tarih_saat'] = df['rev']
 else:
+    # Hiçbir veri bulunamazsa mevcut Türkiye zamanını yazdır
     df['tarih_saat'] = pd.Timestamp.now(tz='Europe/Istanbul').strftime('%d.%m.%Y %H:%M:%S')
+
 
 # Koordinat kontrolü (Felt haritası için kritik)
 if 'geojson' in df.columns and 'lat' not in df.columns:
