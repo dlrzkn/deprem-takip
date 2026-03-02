@@ -13,21 +13,26 @@ data = response.json()['result']
 # 2. Veriyi düzenle
 df = pd.DataFrame(data)
 
-# Zaman bilgisi için kontrol
+# API'den gelen gerçek sütun isimlerini görmek için (Hata ayıklama için)
+print("API Sütunları:", df.columns.tolist())
+
+# Zaman bilgisi kontrolü
 if 'date' in df.columns:
     df['tarih_saat'] = df['date']
-elif 'date_time' in df.columns:
-    df['tarih_saat'] = df['date_time']
 else:
     df['tarih_saat'] = "Bilinmiyor"
 
-# Koordinat ve diğer sütunları garantiye al (API'den gelen orijinal isimleri kullanıyoruz)
-# Kandilli API'sinde enlem 'lat', boylam 'lng' olarak gelir. 
-# Eğer tabloda görünmüyorsa, bu isimlerin varlığını burada zorunlu tutalım:
-cols_to_export = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
+# Koordinat isimlerini API'ye göre eşitle (geojson yapısında olabilirler)
+# Eğer doğrudan lat/lng yoksa koordinat listesinden çekmeyi dener
+if 'geojson' in df.columns:
+    # Bazı API versiyonları koordinatı geojson içinde saklar
+    df['lat'] = df['geojson'].apply(lambda x: x['coordinates'][1])
+    df['lng'] = df['geojson'].apply(lambda x: x['coordinates'][0])
 
-# Sadece bu 6 sütunu al ve ilk 50 depremi seç
-df = df[cols_to_export].head(50)
+# Gereken sütunları güvenli seç
+cols = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
+# Sadece mevcut olanları al, hata vermesini engelle
+df = df[[c for c in cols if c in df.columns]].head(50)
 
 # 3. Google Sheets Bağlantısı
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -39,8 +44,7 @@ client = gspread.authorize(creds)
 spreadsheet_id = "1QfRsf8YjsQnsCq1Gqwl3wXbDbgJxcv4sQGWsGx_G3zU"
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-# Tabloyu temizle ve başlıklarla birlikte veriyi yaz
 sheet.clear()
 sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-print("Tüm sismik bileşenler başarıyla güncellendi.")
+print("Veriler başarıyla işlendi.")
