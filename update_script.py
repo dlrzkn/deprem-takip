@@ -13,7 +13,7 @@ data = response.json()['result']
 # 2. Veriyi düzenle
 df = pd.DataFrame(data)
 
-# Zaman bilgisi kontrolü - 'rev' veya diğer alternatifleri tarar
+# Zaman bilgisi kontrolü
 if 'date' in df.columns:
     df['tarih_saat'] = df['date']
 elif 'rev' in df.columns:
@@ -21,20 +21,30 @@ elif 'rev' in df.columns:
 else:
     df['tarih_saat'] = pd.Timestamp.now(tz='Europe/Istanbul').strftime('%d.%m.%Y %H:%M:%S')
 
-# Koordinat kontrolü (Haritada görünmesi için kritik)
+# Koordinat kontrolü
 if 'geojson' in df.columns and 'lat' not in df.columns:
     df['lat'] = df['geojson'].apply(lambda x: x['coordinates'][1])
     df['lng'] = df['geojson'].apply(lambda x: x['coordinates'][0])
 
-# Aktarılacak sütunları belirle
+# Aktarılacak sütunlar
 cols_to_export = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
 
-# .head(50) kısıtlamasını kaldırarak TÜM güncel veriyi alıyoruz
+# .head(50) SINIRINI KALDIRDIK - Tüm güncel veriyi Felt'e gönderiyoruz
 df = df[cols_to_export]
 
-# 3. Google Sheets Bağlantısı
+# 3. Google Sheets Bağlantısı ve Hata Kontrolü
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-key_dict = json.loads(os.environ['GCP_KEY'])
+gcp_key_raw = os.environ.get('GCP_KEY')
+
+if not gcp_key_raw:
+    raise ValueError("Hata: GCP_KEY gizli değişkeni bulunamadı. Lütfen GitHub Secrets ayarlarını kontrol edin.")
+
+try:
+    key_dict = json.loads(gcp_key_raw)
+except json.JSONDecodeError as e:
+    print(f"Hata: GCP_KEY geçerli bir JSON formatında değil. Hata detayı: {e}")
+    raise
+
 creds = Credentials.from_service_account_info(key_dict, scopes=scopes)
 client = gspread.authorize(creds)
 
