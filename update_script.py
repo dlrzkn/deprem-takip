@@ -17,10 +17,17 @@ df = pd.DataFrame(data)
 print("API Sütunları:", df.columns.tolist())
 
 # Zaman bilgisi kontrolü
+# API'den gelen farklı tarih formatlarını yakalamak için
 if 'date' in df.columns:
     df['tarih_saat'] = df['date']
+elif 'date_time' in df.columns:
+    df['tarih_saat'] = df['date_time']
+elif 'rev' in df.columns:
+    # Kandilli bazen tarih verisini 'rev' sütununda gönderir
+    df['tarih_saat'] = df['rev']
 else:
-    df['tarih_saat'] = "Bilinmiyor"
+    # Eğer hiçbiri yoksa, işlem anının zamanını damga olarak vur
+    df['tarih_saat'] = pd.Timestamp.now(tz='Europe/Istanbul').strftime('%d.%m.%Y %H:%M:%S')
 
 # Koordinat isimlerini API'ye göre eşitle (geojson yapısında olabilirler)
 # Eğer doğrudan lat/lng yoksa koordinat listesinden çekmeyi dener
