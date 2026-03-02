@@ -13,33 +13,24 @@ data = response.json()['result']
 # 2. Veriyi düzenle
 df = pd.DataFrame(data)
 
-# API'den gelen gerçek sütun isimlerini görmek için (Hata ayıklama için)
-print("API Sütunları:", df.columns.tolist())
-
-# Zaman bilgisi kontrolü
-# API'den gelen farklı tarih formatlarını yakalamak için
+# Zaman bilgisi kontrolü - 'rev' veya diğer alternatifleri tarar
 if 'date' in df.columns:
     df['tarih_saat'] = df['date']
-elif 'date_time' in df.columns:
-    df['tarih_saat'] = df['date_time']
 elif 'rev' in df.columns:
-    # Kandilli bazen tarih verisini 'rev' sütununda gönderir
     df['tarih_saat'] = df['rev']
 else:
-    # Eğer hiçbiri yoksa, işlem anının zamanını damga olarak vur
     df['tarih_saat'] = pd.Timestamp.now(tz='Europe/Istanbul').strftime('%d.%m.%Y %H:%M:%S')
 
-# Koordinat isimlerini API'ye göre eşitle (geojson yapısında olabilirler)
-# Eğer doğrudan lat/lng yoksa koordinat listesinden çekmeyi dener
-if 'geojson' in df.columns:
-    # Bazı API versiyonları koordinatı geojson içinde saklar
+# Koordinat kontrolü (Haritada görünmesi için kritik)
+if 'geojson' in df.columns and 'lat' not in df.columns:
     df['lat'] = df['geojson'].apply(lambda x: x['coordinates'][1])
     df['lng'] = df['geojson'].apply(lambda x: x['coordinates'][0])
 
-# Gereken sütunları güvenli seç
-cols = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
-# Sadece mevcut olanları al, hata vermesini engelle
-df = df[[c for c in cols if c in df.columns]].head(50)
+# Aktarılacak sütunları belirle
+cols_to_export = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
+
+# .head(50) kısıtlamasını kaldırarak TÜM güncel veriyi alıyoruz
+df = df[cols_to_export]
 
 # 3. Google Sheets Bağlantısı
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -54,4 +45,4 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 sheet.clear()
 sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-print("Veriler başarıyla işlendi.")
+print(f"İşlem başarılı: {len(df)} adet deprem kaydı aktarıldı.")
