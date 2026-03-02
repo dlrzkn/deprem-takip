@@ -21,7 +21,7 @@ elif 'rev' in df.columns:
 else:
     df['tarih_saat'] = pd.Timestamp.now(tz='Europe/Istanbul').strftime('%d.%m.%Y %H:%M:%S')
 
-# Koordinat kontrolü
+# Koordinat kontrolü (Harita için kritik)
 if 'geojson' in df.columns and 'lat' not in df.columns:
     df['lat'] = df['geojson'].apply(lambda x: x['coordinates'][1])
     df['lng'] = df['geojson'].apply(lambda x: x['coordinates'][0])
@@ -29,20 +29,22 @@ if 'geojson' in df.columns and 'lat' not in df.columns:
 # Aktarılacak sütunlar
 cols_to_export = ['tarih_saat', 'title', 'mag', 'lat', 'lng', 'depth']
 
-# .head(50) SINIRINI KALDIRDIK - Tüm güncel veriyi Felt'e gönderiyoruz
+# TÜM güncel veriyi alıyoruz (sınır kaldırıldı)
 df = df[cols_to_export]
 
-# 3. Google Sheets Bağlantısı ve Hata Kontrolü
+# 3. Google Sheets Bağlantısı (GitHub Secrets isim eşleşmesi yapıldı)
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-gcp_key_raw = os.environ.get('GCP_KEY')
+
+# GitHub'daki isminizle tam eşleşmesi için alternatif isimleri deniyoruz
+gcp_key_raw = os.environ.get('GCP_SERVICE_ACCOUNT_KEY') or os.environ.get('GCP_KEY')
 
 if not gcp_key_raw:
-    raise ValueError("Hata: GCP_KEY gizli değişkeni bulunamadı. Lütfen GitHub Secrets ayarlarını kontrol edin.")
+    raise ValueError("Hata: Gizli anahtar bulunamadı. Lütfen GitHub Secrets ismini kontrol edin.")
 
 try:
     key_dict = json.loads(gcp_key_raw)
 except json.JSONDecodeError as e:
-    print(f"Hata: GCP_KEY geçerli bir JSON formatında değil. Hata detayı: {e}")
+    print(f"Hata: JSON formatı geçersiz. Hata detayı: {e}")
     raise
 
 creds = Credentials.from_service_account_info(key_dict, scopes=scopes)
@@ -55,4 +57,4 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 sheet.clear()
 sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-print(f"İşlem başarılı: {len(df)} adet deprem kaydı aktarıldı.")
+print(f"İşlem başarıyla tamamlandı: {len(df)} adet deprem kaydı aktarıldı.")
