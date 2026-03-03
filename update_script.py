@@ -6,7 +6,7 @@ import json
 import os
 
 # 1. Kandilli'den verileri çek
-url = "https://api.orhanaydogdu.com.tr/deprem/kandilli/live"
+url = "https://api.orhanaydogdu.com.tr/deprem/kandilli/live?limit=500"
 response = requests.get(url)
 data = response.json()['result']
 
